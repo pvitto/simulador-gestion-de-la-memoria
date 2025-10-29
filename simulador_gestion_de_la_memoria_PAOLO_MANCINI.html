@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Simulación de Memoria</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.07);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #004a99, #006bc1);
+            color: white;
+            padding: 25px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2.2em;
+        }
+        header .student-name {
+            font-size: 1.2em;
+            font-weight: 300;
+            opacity: 0.9;
+        }
+
+        .tab-nav {
+            display: flex;
+            background-color: #e9ecef;
+            border-bottom: 3px solid #004a99;
+        }
+        .tab-button {
+            flex: 1;
+            padding: 18px 20px;
+            font-size: 1.1em;
+            font-weight: 600;
+            text-align: center;
+            border: none;
+            background-color: transparent;
+            color: #495057;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+            border-bottom: 4px solid transparent;
+            margin-bottom: -3px;
+        }
+        .tab-button:hover {
+            background-color: #dee2e6;
+        }
+        .tab-button.active {
+            background-color: #ffffff;
+            color: #004a99;
+            border-bottom-color: #007bff;
+        }
+
+        main {
+            padding: 30px 40px;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            margin-top: 0;
+            border-bottom: 3px solid #004a99;
+            padding-bottom: 10px;
+            color: #004a99;
+            font-size: 1.7em;
+        }
+        .simulation-layout {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 30px;
+        }
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .panel {
+            background-color: #fdfdfd;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+        }
+        .panel h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #343a40;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 8px;
+        }
+        
+        .controls {
+            text-align: center;
+        }
+        .call-to-action {
+            font-weight: bold;
+            color: #d81b60;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        .sim-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 14px 22px;
+            font-size: 1.1em;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.2s, transform 0.1s;
+            animation: pulse-animation 1.5s infinite;
+        }
+        .sim-button:hover:not(:disabled) {
+            background-color: #0056b3;
+            animation-play-state: paused;
+        }
+        .sim-button:active:not(:disabled) { transform: scale(0.98); }
+        .sim-button:disabled {
+            background-color: #c0c0c0;
+            cursor: not-allowed;
+            animation: none;
+        }
+        @keyframes pulse-animation {
+            0% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 123, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0); }
+        }
+
+        .process-queue-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .process-queue-list li {
+            background-color: #f8f9fa;
+            padding: 10px 12px;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            margin-bottom: 6px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.95em;
+        }
+        .process-queue-list li.next {
+            font-weight: bold;
+            background-color: #fff3cd;
+            border-color: #ffeeba;
+        }
+
+        .log-area {
+            background-color: #2d2d2d;
+            color: #f0f0f0;
+            border-radius: 8px;
+            padding: 20px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+        }
+        .log-area div {
+            padding: 4px 0;
+            border-bottom: 1px dotted #555;
+        }
+        .log-area .log-step { color: #4dd0e1; font-weight: bold; }
+        .log-area .log-assign { color: #81c784; }
+        .log-area .log-evict { color: #e57373; }
+        .log-area .log-full { color: #ffb74d; }
+        .log-area .log-fail { color: #f44336; }
+        .log-area .log-info { color: #64b5f6; }
+        .log-area .log-finish { color: #4dd0e1; font-weight: bold; font-size: 1.1em; }
+
+
+        #p1-memory-container {
+            display: flex;
+            flex-wrap: wrap;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            background-color: #fafafa;
+        }
+        .p1-partition {
+            flex-basis: 160px;
+            flex-grow: 1;
+            height: 190px;
+            border: 2px solid #ccc;
+            border-radius: 6px;
+            margin: 5px;
+            position: relative;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+        .p1-partition.free {
+            background-color: #e8f5e9; border-color: #a5d6a7;
+        }
+        .p1-partition.occupied {
+            background-color: #ffebee; border-color: #ef9a9a;
+        }
+        .p1-partition-info {
+            padding: 10px;
+            font-weight: bold;
+            font-size: 0.9em;
+            text-align: center;
+        }
+        .p1-partition-size {
+            font-size: 1.1em;
+            color: #004a99;
+            border-bottom: 1px dashed #ccc;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+        }
+        .p1-process-info {
+            font-size: 0.85em;
+            font-weight: normal;
+        }
+        .p1-process-name { font-weight: bold; color: #d81b60; }
+        .p1-internal-frag { color: #e65100; font-style: italic; }
+        .p1-partition.free .p1-process-info { display: none; }
+        .p1-partition.occupied .p1-status-free { display: none; }
+        .p1-status-free {
+            color: #388e3c;
+            font-size: 1.4em;
+            margin-top: 40px;
+        }
+
+        #p2-memory-container {
+            display: flex;
+            height: 120px;
+            border: 3px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: #fafafa;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .p2-mem-block {
+            height: 100%;
+            transition: flex-basis 0.5s ease;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-weight: bold;
+            color: #fff;
+            font-size: 0.9em;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .p2-mem-block.process {
+            background-color: #4a148c;
+            border-right: 2px solid #fff;
+        }
+        .p2-mem-block.free {
+            background-color: #e0e0e0;
+            color: #777;
+            background-image: repeating-linear-gradient(45deg, #d5d5d5 25%, transparent 25%, transparent 50%, #d5d5d5 50%, #d5d5d5 75%, transparent 75%, transparent 100%);
+            background-size: 20px 20px;
+            border-right: 2px dotted #aaa;
+        }
+
+        .p3-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .p3-frames-visual {
+            background-color: #e6f7ff;
+            border: 2px solid #b3e5fc;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+        .p3-frames-bar-container {
+            height: 40px;
+            background-color: #fff;
+            border-radius: 20px;
+            border: 1px solid #b3e5fc;
+            overflow: hidden;
+            margin-top: 15px;
+        }
+        .p3-frames-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #007bff, #00c6ff);
+            transition: width 0.5s ease;
+        }
+        .p3-frames-text {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #01579b;
+        }
+        #p3-process-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        #p3-process-list li {
+            background-color: #f1f3f5;
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        #p3-process-list li span { font-weight: bold; }
+        #p3-frag-total {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #e65100;
+            margin-top: 15px;
+            text-align: right;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <header>
+            <div class="header-title">
+                <h1>Dashboard de Simulación de Memoria</h1>
+                <span class="student-name">Paolo Mancini</span>
+            </div>
+        </header>
+
+        <nav class="tab-nav">
+            <button class="tab-button active" onclick="openTab(event, 'p1')">Problema 1: Particionado Fijo</button>
+            <button class="tab-button" onclick="openTab(event, 'p2')">Problema 2: Segmentación</button>
+            <button class="tab-button" onclick="openTab(event, 'p3')">Problema 3: Paginación</button>
+        </nav>
+
+        <main>
+            <section id="p1" class="tab-content active">
+                <h2>Gestión de la memoria: Particionado fijo</h2>
+                <div class="simulation-layout">
+                    <div class="left-panel">
+                        <div class="panel">
+                            <h3>Estado de la Memoria (4000 kB Total)</h3>
+                            <div id="p1-memory-container">
+                            </div>
+                        </div>
+                        <div class="panel log-area" id="p1-log-area">
+                            <h3>Bitácora de Eventos</h3>
+                        </div>
+                    </div>
+                    <div class="right-panel">
+                        <div class="panel controls">
+                            <h3>Panel de Control (Best Fit)</h3>
+                            <p class="call-to-action" id="p1-cta">👇 ¡Comienza aquí! 👇</p>
+                            <button class="sim-button" id="p1-next-step-btn">Siguiente Paso</button>
+                        </div>
+                        <div class="panel">
+                            <h3>Cola de Procesos</h3>
+                            <ul class="process-queue-list" id="p1-process-queue-list">
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="p2" class="tab-content">
+                <h2>Gestión de la memoria: Segmentación</h2>
+                <div class="simulation-layout">
+                    <div class="left-panel">
+                        <div class="panel">
+                            <h3>Estado de la Memoria (8 MB Total)</h3>
+                            <div id="p2-memory-container">
+                            </div>
+                        </div>
+                        <div class="panel log-area" id="p2-log-area">
+                            <h3>Bitácora de Eventos</h3>
+                        </div>
+                    </div>
+                    <div class="right-panel">
+                        <div class="panel controls">
+                            <h3>Panel de Control (LRU)</h3>
+                            <p class="call-to-action" id="p2-cta">👇 ¡Comienza aquí! 👇</p>
+                            <button class="sim-button" id="p2-next-step-btn">Siguiente Paso</button>
+                        </div>
+                        <div class="panel">
+                            <h3>Cola de Procesos</h3>
+                            <ul class="process-queue-list" id="p2-process-queue-list">
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="p3" class="tab-content">
+                <h2>Gestión de la memoria: Paginación</h2>
+                <div class="simulation-layout">
+                    <div class="left-panel">
+                        <div class="panel">
+                            <h3>Uso de Marcos de Página</h3>
+                            <div class="p3-frames-visual">
+                                <span class="p3-frames-text" id="p3-frames-text">0 / 512 Marcos Utilizados</span>
+                                <div class="p3-frames-bar-container">
+                                    <div class="p3-frames-bar" id="p3-frames-bar"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel">
+                            <h3>Procesos en Memoria</h3>
+                            <ul id="p3-process-list">
+                            </ul>
+                            <p id="p3-frag-total">Fragmentación Interna Total: 0 kB</p>
+                        </div>
+                        <div class="panel log-area" id="p3-log-area">
+                            <h3>Bitácora de Eventos</h3>
+                        </div>
+                    </div>
+                    <div class="right-panel">
+                        <div class="panel controls">
+                            <h3>Panel de Control (LRU)</h3>
+                            <p class="call-to-action" id="p3-cta">👇 ¡Comienza aquí! 👇</p>
+                            <button class="sim-button" id="p3-next-step-btn">Siguiente Paso</button>
+                        </div>
+                        <div class="panel">
+                            <h3>Cola de Procesos</h3>
+                            <ul class="process-queue-list" id="p3-process-queue-list">
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        'use strict';
+
+        function openTab(event, tabId) {
+            const tabContents = document.getElementsByClassName('tab-content');
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].style.display = 'none';
+                tabContents[i].classList.remove('active');
+            }
+
+            const tabButtons = document.getElementsByClassName('tab-button');
+            for (let i = 0; i < tabButtons.length; i++) {
+                tabButtons[i].classList.remove('active');
+            }
+
+            document.getElementById(tabId).style.display = 'block';
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        function logMessage(areaId, message, type = '') {
+            const logArea = document.getElementById(areaId);
+            logArea.innerHTML += `<div class="log-${type}">${message}</div>`;
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        function renderQueue(listId, queue, step, baseProcesses) {
+            const queueList = document.getElementById(listId);
+            queueList.innerHTML = '';
+            if (step >= queue.length) {
+                queueList.innerHTML = '<li>¡Simulación completada!</li>';
+                return;
+            }
+            
+            for (let i = step; i < queue.length; i++) {
+                const li = document.createElement('li');
+                const processName = queue[i];
+                const processSize = baseProcesses[processName].sizeText || baseProcesses[processName].size;
+                const unit = baseProcesses[processName].unit || 'kB';
+                li.textContent = `${processName} (Tamaño: ${processSize} ${unit})`;
+                
+                if (i === step) {
+                    li.className = 'next';
+                    li.textContent += ' <-- SIGUIENTE';
+                }
+                queueList.appendChild(li);
+            }
+        }
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const p1 = {
+                particiones: [
+                    { id: 0, size: 800, isOccupied: false, process: null },
+                    { id: 1, size: 1000, isOccupied: false, process: null },
+                    { id: 2, size: 250, isOccupied: false, process: null },
+                    { id: 3, size: 900, isOccupied: false, process: null },
+                    { id: 4, size: 550, isOccupied: false, process: null },
+                    { id: 5, size: 300, isOccupied: false, process: null },
+                    { id: 6, size: 200, isOccupied: false, process: null }
+                ],
+                procesosBase: {
+                    'P0': { size: 467, unit: 'kB' },
+                    'P1': { size: 822, unit: 'kB' },
+                    'P2': { size: 176, unit: 'kB' },
+                    'P3': { size: 583, unit: 'kB' }
+                },
+                cola: ['P0', 'P1', 'P2', 'P3', 'P1', 'P0', 'P2', 'P1', 'P3', 'P0'],
+                pasoActual: 0,
+                processCounter: { 'P0': 0, 'P1': 0, 'P2': 0, 'P3': 0 },
+                
+                memoryContainer: document.getElementById('p1-memory-container'),
+                logArea: document.getElementById('p1-log-area'),
+                nextStepBtn: document.getElementById('p1-next-step-btn'),
+                queueList: document.getElementById('p1-process-queue-list'),
+                cta: document.getElementById('p1-cta'),
+                
+                log: (msg, type) => logMessage('p1-log-area', msg, type),
+                
+                init: function() {
+                    this.nextStepBtn.addEventListener('click', () => this.ejecutarSiguientePaso());
+                    this.log('Sistema de Particionado Fijo inicializado.', 'info');
+                    this.renderizarMemoria();
+                    this.renderizarCola();
+                },
+                
+                renderizarMemoria: function() {
+                    this.memoryContainer.innerHTML = '';
+                    for (const p of this.particiones) {
+                        const div = document.createElement('div');
+                        div.className = `p1-partition ${p.isOccupied ? 'occupied' : 'free'}`;
+                        const frag = p.process ? (p.size - p.process.size) : '---';
+                        div.innerHTML = `
+                            <div class="p1-partition-info">
+                                <div class="p1-partition-size">Partición: ${p.size} kB</div>
+                                <div class="p1-process-info">
+                                    <span class="p1-status-free">LIBRE</span>
+                                    <div class="p1-process-name">${p.process ? p.process.name : ''}</div>
+                                    <div>Proceso: ${p.process ? p.process.size : '---'} kB</div>
+                                    <div class="p1-internal-frag">Frag. Int: ${frag} kB</div>
+                                </div>
+                            </div>
+                        `;
+                        this.memoryContainer.appendChild(div);
+                    }
+                },
+                
+                renderizarCola: function() {
+                    renderQueue('p1-process-queue-list', this.cola, this.pasoActual, this.procesosBase);
+                },
+
+                ejecutarSiguientePaso: function() {
+                    if (this.pasoActual === 0) this.cta.style.display = 'none';
+                    if (this.pasoActual >= this.cola.length) return;
+
+                    const processNameBase = this.cola[this.pasoActual];
+                    const processSize = this.procesosBase[processNameBase].size;
+                    this.processCounter[processNameBase]++;
+                    const processNameUnique = `${processNameBase}_${this.processCounter[processNameBase]}`;
+
+                    this.log(`--- PASO ${this.pasoActual + 1}: Llega ${processNameUnique} (Tamaño: ${processSize} kB) ---`, 'step');
+
+                    if (!this.asignarProceso(processNameUnique, processSize)) {
+                        this.log(`Memoria llena o sin particiones adecuadas.`, 'full');
+                        if (this.desalojarProcesoMasGrande()) {
+                            this.log(`Reintentando asignación para ${processNameUnique}...`, 'info');
+                            if (!this.asignarProceso(processNameUnique, processSize)) {
+                                this.log(`FALLO: ${processNameUnique} no pudo ser asignado.`, 'fail');
+                            }
+                        } else {
+                            this.log(`FALLO: No hay procesos para desalojar.`, 'fail');
+                        }
+                    }
+
+                    this.pasoActual++;
+                    this.renderizarMemoria();
+                    this.renderizarCola();
+                    
+                    if (this.pasoActual >= this.cola.length) {
+                        this.log('--- Simulación (P1) finalizada ---', 'finish');
+                        this.nextStepBtn.disabled = true;
+                    }
+                },
+
+                asignarProceso: function(processName, processSize) {
+                    const particionesLibres = this.particiones.filter(p => !p.isOccupied && p.size >= processSize);
+                    if (particionesLibres.length === 0) return false;
+                    
+                    particionesLibres.sort((a, b) => a.size - b.size);
+                    const mejorParticion = particionesLibres[0];
+                    
+                    const pOriginal = this.particiones.find(p => p.id === mejorParticion.id);
+                    pOriginal.isOccupied = true;
+                    pOriginal.process = { name: processName, size: processSize };
+                    
+                    this.log(`ASIGNADO: ${processName} en partición de ${pOriginal.size} kB.`, 'assign');
+                    return true;
+                },
+
+                desalojarProcesoMasGrande: function() {
+                    const ocupadas = this.particiones.filter(p => p.isOccupied && p.process);
+                    if (ocupadas.length === 0) return false;
+
+                    ocupadas.sort((a, b) => b.process.size - a.process.size);
+                    const pADesalojar = ocupadas[0];
+                    
+                    const pOriginal = this.particiones.find(p => p.id === pADesalojar.id);
+                    const procDesalojado = pOriginal.process;
+                    pOriginal.isOccupied = false;
+                    pOriginal.process = null;
+                    
+                    this.log(`DESALOJADO: ${procDesalojado.name} (Tamaño: ${procDesalojado.size} kB) de la partición de ${pOriginal.size} kB.`, 'evict');
+                    return true;
+                }
+            };
+            p1.init();
+        });
+
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            const p2 = {
+                memory: [
+                    { type: 'free', size: 8 }
+                ],
+                procesosBase: {
+                    'P0': { size: 1.52, unit: 'MB', sizeText: '1.52' },
+                    'P1': { size: 2.82, unit: 'MB', sizeText: '2.82' },
+                    'P2': { size: 3.79, unit: 'MB', sizeText: '3.79' },
+                    'P3': { size: 3.02, unit: 'MB', sizeText: '3.02' },
+                    'P4': { size: 0.754, unit: 'MB', sizeText: '0.754' },
+                    'P5': { size: 2.06, unit: 'MB', sizeText: '2.06' }
+                },
+                cola: ['P0', 'P4', 'P5', 'P4', 'P1', 'P3', 'P2', 'P2', 'P0', 'P1', 'P3', 'P5', 'P4', 'P2'],
+                procesosEnMemoria: [],
+                pasoActual: 0,
+                tiempoGlobal: 0,
+                processCounter: { 'P0': 0, 'P1': 0, 'P2': 0, 'P3': 0, 'P4': 0, 'P5': 0 },
+                
+                memoryContainer: document.getElementById('p2-memory-container'),
+                logArea: document.getElementById('p2-log-area'),
+                nextStepBtn: document.getElementById('p2-next-step-btn'),
+                queueList: document.getElementById('p2-process-queue-list'),
+                cta: document.getElementById('p2-cta'),
+                
+                log: (msg, type) => logMessage('p2-log-area', msg, type),
+
+                init: function() {
+                    this.nextStepBtn.addEventListener('click', () => this.ejecutarSiguientePaso());
+                    this.log('Sistema de Segmentación inicializado.', 'info');
+                    this.renderizarMemoria();
+                    this.renderizarCola();
+                },
+
+                renderizarMemoria: function() {
+                    this.memoryContainer.innerHTML = '';
+                    const totalSize = 8;
+                    for (const block of this.memory) {
+                        const div = document.createElement('div');
+                        div.className = `p2-mem-block ${block.type}`;
+                        const percentage = (block.size / totalSize) * 100;
+                        div.style.flexBasis = `${percentage}%`;
+                        if (block.type === 'process') {
+                            div.textContent = `${block.process.name} (${block.size} MB)`;
+                        } else {
+                            div.textContent = `Libre (${block.size.toFixed(3)} MB)`;
+                        }
+                        this.memoryContainer.appendChild(div);
+                    }
+                },
+                
+                renderizarCola: function() {
+                    renderQueue('p2-process-queue-list', this.cola, this.pasoActual, this.procesosBase);
+                },
+
+                ejecutarSiguientePaso: function() {
+                    if (this.pasoActual === 0) this.cta.style.display = 'none';
+                    if (this.pasoActual >= this.cola.length) return;
+
+                    this.tiempoGlobal++;
+                    const processNameBase = this.cola[this.pasoActual];
+                    const processSize = this.procesosBase[processNameBase].size;
+                    this.processCounter[processNameBase]++;
+                    const processNameUnique = `${processNameBase}_${this.processCounter[processNameBase]}`;
+
+                    this.log(`--- PASO ${this.pasoActual + 1}: Llega ${processNameUnique} (Tamaño: ${processSize} MB) ---`, 'step');
+
+                    let asignado = this.asignarProceso(processNameUnique, processSize, this.tiempoGlobal);
+                    
+                    while (!asignado) {
+                        this.log(`Memoria llena o sin huecos adecuados.`, 'full');
+                        if (this.desalojarProcesoMasAntiguo()) {
+                            this.log(`Reintentando asignación para ${processNameUnique}...`, 'info');
+                            this.fusionarHuecos();
+                            asignado = this.asignarProceso(processNameUnique, processSize, this.tiempoGlobal);
+                        } else {
+                            this.log(`FALLO: No hay procesos para desalojar.`, 'fail');
+                            break;
+                        }
+                    }
+
+                    this.pasoActual++;
+                    this.renderizarMemoria();
+                    this.renderizarCola();
+                    
+                    if (this.pasoActual >= this.cola.length) {
+                        this.log('--- Simulación (P2) finalizada ---', 'finish');
+                        this.nextStepBtn.disabled = true;
+                    }
+                },
+
+                asignarProceso: function(processName, processSize, time) {
+                    for (let i = 0; i < this.memory.length; i++) {
+                        const block = this.memory[i];
+                        if (block.type === 'free' && block.size >= processSize) {
+                            const newProcess = { name: processName, size: processSize, time: time };
+                            const newBlock = {
+                                type: 'process',
+                                size: processSize,
+                                process: newProcess
+                            };
+                            
+                            this.procesosEnMemoria.push(newProcess);
+                            
+                            const remainingSize = block.size - processSize;
+                            
+                            if (remainingSize > 0.001) {
+                                const freeBlock = { type: 'free', size: remainingSize };
+                                this.memory.splice(i, 1, newBlock, freeBlock);
+                            } else {
+                                newBlock.size = block.size;
+                                this.memory.splice(i, 1, newBlock);
+                            }
+                            
+                            this.log(`ASIGNADO: ${processName} en hueco de ${block.size.toFixed(3)} MB.`, 'assign');
+                            return true;
+                        }
+                    }
+                    return false;
+                },
+                
+                desalojarProcesoMasAntiguo: function() {
+                    if (this.procesosEnMemoria.length === 0) return false;
+                    
+                    this.procesosEnMemoria.sort((a, b) => a.time - b.time);
+                    const procesoADesalojar = this.procesosEnMemoria.shift();
+                    
+                    for (let i = 0; i < this.memory.length; i++) {
+                        const block = this.memory[i];
+                        if (block.type === 'process' && block.process.name === procesoADesalojar.name) {
+                            this.log(`DESALOJADO: ${procesoADesalojar.name} (Llegó en T=${procesoADesalojar.time})`, 'evict');
+                            this.memory[i] = { type: 'free', size: block.size };
+                            return true;
+                        }
+                    }
+                    return false;
+                },
+                
+                fusionarHuecos: function() {
+                    let i = 0;
+                    while (i < this.memory.length - 1) {
+                        if (this.memory[i].type === 'free' && this.memory[i+1].type === 'free') {
+                            this.memory[i].size += this.memory[i+1].size;
+                            this.memory.splice(i + 1, 1);
+                        } else {
+                            i++;
+                        }
+                    }
+                }
+            };
+            p2.init();
+        });
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const p3 = {
+                totalFrames: 512,
+                usedFrames: 0,
+                procesosBase: {
+                    'P0': { size: 509, pages: 128, frag: 3, unit: 'kB' },
+                    'P1': { size: 490, pages: 123, frag: 2, unit: 'kB' },
+                    'P2': { size: 1065, pages: 267, frag: 3, unit: 'kB', sizeText: '1.04 MB' },
+                    'P3': { size: 83, pages: 21, frag: 1, unit: 'kB' },
+                    'P4': { size: 354, pages: 89, frag: 2, unit: 'kB' },
+                    'P5': { size: 206, pages: 52, frag: 2, unit: 'kB' }
+                },
+                cola: ['P0', 'P5', 'P3', 'P1', 'P1', 'P4', 'P2', 'P0', 'P0', 'P3', 'P3', 'P5', 'P4', 'P5', 'P1', 'P2'],
+                procesosEnMemoria: [],
+                pasoActual: 0,
+                tiempoGlobal: 0,
+                processCounter: { 'P0': 0, 'P1': 0, 'P2': 0, 'P3': 0, 'P4': 0, 'P5': 0 },
+                
+                logArea: document.getElementById('p3-log-area'),
+                nextStepBtn: document.getElementById('p3-next-step-btn'),
+                queueList: document.getElementById('p3-process-queue-list'),
+                cta: document.getElementById('p3-cta'),
+                framesText: document.getElementById('p3-frames-text'),
+                framesBar: document.getElementById('p3-frames-bar'),
+                processList: document.getElementById('p3-process-list'),
+                fragTotal: document.getElementById('p3-frag-total'),
+                
+                log: (msg, type) => logMessage('p3-log-area', msg, type),
+
+                init: function() {
+                    this.nextStepBtn.addEventListener('click', () => this.ejecutarSiguientePaso());
+                    this.log('Sistema de Paginación inicializado.', 'info');
+                    this.log(`Total de Marcos: ${this.totalFrames} (Mem: 2048kB / Marco: 4kB)`, 'info');
+                    this.renderizarCola();
+                    this.renderizarEstado();
+                },
+                
+                renderizarCola: function() {
+                    renderQueue('p3-process-queue-list', this.cola, this.pasoActual, this.procesosBase);
+                },
+
+                renderizarEstado: function() {
+                    this.framesText.textContent = `${this.usedFrames} / ${this.totalFrames} Marcos Utilizados`;
+                    const percentage = (this.usedFrames / this.totalFrames) * 100;
+                    this.framesBar.style.width = `${percentage}%`;
+                    
+                    this.processList.innerHTML = '';
+                    let totalFrag = 0;
+                    for (const proc of this.procesosEnMemoria) {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<span>${proc.name}</span> (Págs: ${proc.pages} | Frag: ${proc.frag} kB)`;
+                        this.processList.appendChild(li);
+                        totalFrag += proc.frag;
+                    }
+                    this.fragTotal.textContent = `Fragmentación Interna Total: ${totalFrag} kB`;
+                },
+                
+                ejecutarSiguientePaso: function() {
+                    if (this.pasoActual === 0) this.cta.style.display = 'none';
+                    if (this.pasoActual >= this.cola.length) return;
+
+                    this.tiempoGlobal++;
+                    const processNameBase = this.cola[this.pasoActual];
+                    const procInfo = this.procesosBase[processNameBase];
+                    this.processCounter[processNameBase]++;
+                    const processNameUnique = `${processNameBase}_${this.processCounter[processNameBase]}`;
+
+                    this.log(`--- PASO ${this.pasoActual + 1}: Llega ${processNameUnique} (Págs: ${procInfo.pages}) ---`, 'step');
+                    
+                    const newProcess = {
+                        name: processNameUnique,
+                        pages: procInfo.pages,
+                        frag: procInfo.frag,
+                        time: this.tiempoGlobal
+                    };
+
+                    let asignado = this.asignarProceso(newProcess);
+                    
+                    while (!asignado) {
+                        this.log(`Memoria llena. Se necesitan ${newProcess.pages} marcos, solo hay ${this.totalFrames - this.usedFrames}.`, 'full');
+                        if (this.desalojarProcesoMasAntiguo()) {
+                            this.log(`Reintentando asignación para ${processNameUnique}...`, 'info');
+                            asignado = this.asignarProceso(newProcess);
+                        } else {
+                            this.log(`FALLO: No hay procesos para desalojar.`, 'fail');
+                            break; 
+                        }
+                    }
+
+                    this.pasoActual++;
+                    this.renderizarEstado();
+                    this.renderizarCola();
+                    
+                    if (this.pasoActual >= this.cola.length) {
+                        this.log('--- Simulación (P3) finalizada ---', 'finish');
+                        this.log(`Fragmentación Externa: 0 kB (ventaja de paginación)`, 'info');
+                        this.nextStepBtn.disabled = true;
+                    }
+                },
+                
+                asignarProceso: function(process) {
+                    if (this.usedFrames + process.pages <= this.totalFrames) {
+                        this.procesosEnMemoria.push(process);
+                        this.usedFrames += process.pages;
+                        this.log(`ASIGNADO: ${process.name} (${process.pages} marcos).`, 'assign');
+                        return true;
+                    }
+                    return false;
+                },
+
+                desalojarProcesoMasAntiguo: function() {
+                    if (this.procesosEnMemoria.length === 0) return false;
+                    
+                    this.procesosEnMemoria.sort((a, b) => a.time - b.time);
+                    const procesoADesalojar = this.procesosEnMemoria.shift();
+                    
+                    this.usedFrames -= procesoADesalojar.pages;
+                    this.log(`DESALOJADO: ${procesoADesalojar.name} (Liberó ${procesoADesalojar.pages} marcos | Llegó en T=${procesoADesalojar.time})`, 'evict');
+                    return true;
+                }
+            };
+            p3.init();
+        });
+
+    </script>
+</body>
+</html>
